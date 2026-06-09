@@ -39,6 +39,48 @@
     button, input, select, textarea { font: inherit; }
     button { border: 0; cursor: pointer; }
 
+    body.is-locked .shell { display: none; }
+
+    .auth-gate {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+
+    body:not(.is-locked) .auth-gate { display: none; }
+
+    .login-card {
+      width: min(460px, 100%);
+      background: rgba(255, 255, 255, .94);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 24px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .login-card h1 {
+      font-size: 34px;
+    }
+
+    .login-card form {
+      display: grid;
+      gap: 12px;
+    }
+
+    .auth-error {
+      display: none;
+      color: var(--red);
+      background: var(--red-soft);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-weight: 800;
+    }
+
+    .auth-error.visible { display: block; }
+
     .shell {
       width: min(1680px, calc(100% - 32px));
       margin: 0 auto;
@@ -116,19 +158,6 @@
       color: white;
     }
 
-    .add-entry-tab {
-      background: var(--green);
-      color: white;
-      min-height: 48px;
-      padding: 0 18px;
-      box-shadow: var(--shadow);
-    }
-
-    .add-entry-tab.active {
-      background: var(--green);
-      color: white;
-    }
-
     .btn {
       min-height: 42px;
       border-radius: 8px;
@@ -152,6 +181,13 @@
     .btn.danger {
       color: var(--red);
       background: var(--red-soft);
+    }
+
+    .save-status {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
     }
 
     .view { display: none; }
@@ -509,37 +545,53 @@
       .tabs { width: 100%; }
       .tab { flex: 1; }
       .nav-row { flex-direction: column; }
-      .add-entry-tab { width: 100%; }
       .bar-row { grid-template-columns: 1fr 42px; }
       .bar-track { grid-column: 1 / -1; grid-row: 2; }
     }
   </style>
 </head>
-<body>
+<body class="is-locked">
+  <section class="auth-gate" aria-label="Login">
+    <div class="login-card">
+      <div>
+        <div class="eyebrow">Debt settlement operations</div>
+        <h1>DS Ops Metrics</h1>
+        <p class="subhead">Sign in to view or update the shared team metrics.</p>
+      </div>
+      <form id="loginForm">
+        <label>Email
+          <input id="loginEmail" type="email" autocomplete="username" required>
+        </label>
+        <label>Password
+          <input id="loginPassword" type="password" autocomplete="current-password" required>
+        </label>
+        <div class="auth-error" id="loginError"></div>
+        <button class="btn" type="submit">Log In</button>
+      </form>
+    </div>
+  </section>
   <main class="shell">
     <header>
       <div>
         <div class="eyebrow">Debt settlement operations</div>
         <h1>DS Ops Metrics</h1>
-        <p class="subhead">Settlement attempts feed the main metrics automatically. The other daily task counts are manually editable for now and roll into daily and weekly reports.</p>
+        <p class="subhead">Add settlement attempts and daily metrics from one screen. Attempts and successful negotiations update automatically from the attempt log.</p>
       </div>
       <div class="header-actions">
+        <span class="save-status" id="saveStatus">Checking login...</span>
         <button class="btn secondary" id="exportAttemptsBtn" type="button">Export Attempts</button>
         <button class="btn secondary" id="exportWeeklyBtn" type="button">Export Report</button>
-        <button class="btn secondary" id="exportDataBtn" type="button">Export My Data</button>
-        <button class="btn secondary" id="importDataBtn" type="button">Import Team Data</button>
-        <input id="importDataFile" type="file" accept=".json,application/json" hidden>
         <button class="btn secondary" id="settingsBtn" type="button">Settings</button>
+        <button class="btn secondary" id="logoutBtn" type="button">Log Out</button>
       </div>
     </header>
 
     <div class="nav-row">
       <nav class="tabs" aria-label="Views">
-        <button class="tab active" data-view="overview" type="button">Overview</button>
-        <button class="tab" data-view="daily" type="button">Reports</button>
+        <button class="tab active" data-view="newAttempt" type="button">Add Entries</button>
+        <button class="tab" data-view="overview" type="button">Reports</button>
         <button class="tab" data-view="log" type="button">Settlement Log</button>
       </nav>
-      <button class="tab add-entry-tab" data-view="newAttempt" type="button">Add Entries</button>
     </div>
 
     <section class="panel settings-panel" id="settingsPanel">
@@ -553,7 +605,7 @@
       </form>
     </section>
 
-    <section class="view active" id="overviewView">
+    <section class="view" id="overviewView">
       <section class="panel overview-controls">
         <div class="panel-head stack">
           <h2>Team Performance Overview</h2>
@@ -605,7 +657,7 @@
       </div>
     </section>
 
-    <section class="view" id="newAttemptView">
+    <section class="view active" id="newAttemptView">
       <section class="panel entry-form">
         <div class="panel-head stack">
           <h2>New Settlement Attempt</h2>
@@ -654,7 +706,7 @@
             <input id="dailyDate" type="date">
             <span class="pill blue" id="editingDayBadge">Editing today</span>
           </div>
-          <p class="helper">Add daily team metrics here. Click an edit button from Reports to load a specific owner and day.</p>
+          <p class="helper">Add the daily metrics that are not settlement attempts. Negotiation attempts and successful negotiations update automatically from the settlement attempt log.</p>
         </div>
         <form class="form" id="dailyTaskForm">
           <div class="metrics-grid">
@@ -726,8 +778,8 @@
   </main>
 
   <script>
-    const attemptStorageKey = "dsOpsSettlementAttempts.v4";
-    const taskStorageKey = "dsOpsDailyMetrics.v2";
+    const attemptStorageKey = "dsOpsSettlementAttempts.online.v1";
+    const taskStorageKey = "dsOpsDailyMetrics.online.v1";
     const timeEstimateStorageKey = "dsOpsTimeEstimates.v1";
     const owners = ["Ges", "Ron", "Bon"];
     const results = ["Settled!", "Offer Submitted", "No connection", "Client not enough funds", "Creditor Not ready to Settle", "No POA", "Account transferred to other creditor", "Settlements too high", "Client declined", "Need POA", "Follow up", "Other"];
@@ -750,24 +802,15 @@
       { key: "settled", label: "SUCCESSFUL Negotiation", minutes: 10 }
     ];
     const reportColumns = [...autoMetrics, { key: "successRate", label: "Successful Negotiation %" }, ...manualMetrics, { key: "hours", label: "Time Estimate (Hrs)" }];
-    const seedAttempts = [
-    {
-        "id":  "csv-1",
-        "owner":  "Ges",
-        "date":  "2026-04-27",
-        "time":  "13:50",
-        "client":  "Tammy Woodall",
-        "creditor":  "Halsted Financial",
-        "result":  "Offer Submitted",
-        "reason":  "Waiting on creditor approval",
-        "note":  ""
-    }
-    ];
+    const seedAttempts = [];
     const seedTasks = {};
 
+
     const $ = (selector) => document.querySelector(selector);
-    let attempts = loadJson(attemptStorageKey, cloneSeedAttempts());
-    let dailyTasks = loadJson(taskStorageKey, cloneSeedTasks());
+    let attempts = cloneSeedAttempts();
+    let dailyTasks = cloneSeedTasks();
+    let isOnline = false;
+    let saveTimer = null;
     applySavedTimeEstimates();
 
     function loadJson(key, fallback) {
@@ -799,14 +842,81 @@
       });
     }
 
+    function setSaveStatus(message) {
+      const target = $("#saveStatus");
+      if (target) target.textContent = message;
+    }
+
+    function applyTimeEstimateValues(values = {}) {
+      [...autoMetrics, ...manualMetrics].forEach((metric) => {
+        if (metric.type === "text") return;
+        if (values[metric.key] !== undefined) metric.minutes = Number(values[metric.key] || 0);
+      });
+    }
+
+    function currentTimeEstimates() {
+      return Object.fromEntries(allMetricDefinitions().map((metric) => [metric.key, Number(metric.minutes || 0)]));
+    }
+
     function saveAll() {
       localStorage.setItem(attemptStorageKey, JSON.stringify(attempts));
       localStorage.setItem(taskStorageKey, JSON.stringify(dailyTasks));
-      saveServerData();
+      queueServerSave();
     }
 
-    async function loadServerData() {}
-    async function saveServerData() {}
+    async function loadServerData() {
+      setSaveStatus("Loading shared data...");
+      const response = await fetch("/api/data", { credentials: "same-origin" });
+      if (!response.ok) {
+        const detail = await response.json().catch(() => ({}));
+        throw new Error(detail.error || "Could not load shared metrics.");
+      }
+      const data = await response.json();
+      attempts = Array.isArray(data.attempts) ? data.attempts : [];
+      dailyTasks = data.dailyTasks && typeof data.dailyTasks === "object" ? data.dailyTasks : {};
+      if (data.timeEstimates) {
+        applyTimeEstimateValues(data.timeEstimates);
+        localStorage.setItem(timeEstimateStorageKey, JSON.stringify(currentTimeEstimates()));
+      }
+      localStorage.setItem(attemptStorageKey, JSON.stringify(attempts));
+      localStorage.setItem(taskStorageKey, JSON.stringify(dailyTasks));
+      isOnline = true;
+      setSaveStatus("Online save ready");
+    }
+
+    function queueServerSave() {
+      if (!isOnline) return;
+      clearTimeout(saveTimer);
+      setSaveStatus("Saving...");
+      saveTimer = setTimeout(saveServerData, 250);
+    }
+
+    async function saveServerData() {
+      if (!isOnline) return;
+      try {
+        const response = await fetch("/api/data", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ attempts, dailyTasks, timeEstimates: currentTimeEstimates() })
+        });
+        if (!response.ok) {
+          const detail = await response.json().catch(() => ({}));
+          throw new Error(detail.error || "Could not save shared metrics.");
+        }
+        const data = await response.json();
+        if (Array.isArray(data.attempts)) attempts = data.attempts;
+        if (data.dailyTasks && typeof data.dailyTasks === "object") dailyTasks = data.dailyTasks;
+        if (data.timeEstimates) applyTimeEstimateValues(data.timeEstimates);
+        localStorage.setItem(attemptStorageKey, JSON.stringify(attempts));
+        localStorage.setItem(taskStorageKey, JSON.stringify(dailyTasks));
+        setSaveStatus("Saved online");
+        render();
+      } catch (error) {
+        setSaveStatus("Save failed");
+        window.alert(error.message || "Could not save online.");
+      }
+    }
 
     function todayLocal() {
       const now = new Date();
@@ -896,8 +1006,8 @@
       const dayAttempts = attemptsFor(owner, date, date);
       const task = getTask(owner, date);
       const rollup = {
-        attempts: Number(task.attempts || 0),
-        settled: Number(task.settled || 0),
+        attempts: dayAttempts.length,
+        settled: dayAttempts.filter((attempt) => attempt.result === "Settled!").length,
         offers: dayAttempts.filter((attempt) => attempt.result === "Offer Submitted").length
       };
       manualMetrics.forEach((metric) => {
@@ -908,11 +1018,14 @@
 
     function rangeRollup(owner, start, end) {
       const totals = emptyReportTotals();
+      const scopedAttempts = attemptsFor(owner, start, end);
+      totals.attempts = scopedAttempts.length;
+      totals.settled = scopedAttempts.filter((attempt) => attempt.result === "Settled!").length;
+      totals.offers = scopedAttempts.filter((attempt) => attempt.result === "Offer Submitted").length;
       Object.entries(dailyTasks).forEach(([key, task]) => {
         const [taskOwner, date] = key.split("|");
         const ownerMatch = !owner || owner === "all" || taskOwner === owner;
         if (!ownerMatch || date < start || date > end) return;
-        autoMetrics.forEach((metric) => totals[metric.key] += Number(task[metric.key] || 0));
         manualMetrics.forEach((metric) => {
           if (metric.type === "text") {
             const note = String(task[metric.key] || "").trim();
@@ -922,7 +1035,7 @@
           }
         });
       });
-      totals.successRate = totals.attempts ? Math.round((totals.settled / totals.attempts) * 100) : 0;
+      totals.successRate = totals.attempts ? Math.round((totals.settled / totals.attempts) * 100) : null;
       totals.hours = estimateHours(totals);
       return totals;
     }
@@ -933,11 +1046,18 @@
       return row;
     }
 
+    function weeklyRollup(owner, pickedDate) {
+      const range = getWeekRange(pickedDate);
+      const start = dateKey(range.start);
+      const end = dateKey(range.end);
+      return { range, totals: rangeRollup(owner, start, end) };
+      }
+
     function emptyReportTotals() {
       const totals = { offers: 0 };
       autoMetrics.forEach((metric) => totals[metric.key] = 0);
       manualMetrics.forEach((metric) => totals[metric.key] = metric.type === "text" ? "" : 0);
-      totals.successRate = 0;
+      totals.successRate = null;
       totals.hours = 0;
       return totals;
     }
@@ -1070,7 +1190,7 @@
       $("#dailySifCard").textContent = rollup.sifPif;
       $("#dailyHours").textContent = rollup.hours.toFixed(1);
       const task = getTask(owner, date);
-      $("#manualTaskFields").innerHTML = [...autoMetrics, ...manualMetrics].map((metric) => `
+      $("#manualTaskFields").innerHTML = manualMetrics.map((metric) => `
         <label>${metric.label}
           <input type="text" ${metric.type === "text" ? "" : 'inputmode="numeric" pattern="[0-9]*"'} data-task="${metric.key}" value="${metric.type === "text" ? escapeHtml(task[metric.key] || "") : Number(task[metric.key] || 0)}">
         </label>
@@ -1118,7 +1238,7 @@
 
     function renderLog() {
       renderAttemptHead($("#attemptHead"));
-      renderAttemptRows($("#attemptRows"), getFilteredAttempts(), true);
+      renderAttemptRows($("#attemptRows"), getFilteredAttempts(), false);
     }
 
     function renderSettings() {
@@ -1162,61 +1282,9 @@
       URL.revokeObjectURL(url);
     }
 
-    function downloadJson(filename, data) {
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = filename;
-      link.click();
-      URL.revokeObjectURL(url);
-    }
-
     function currentExportRange() {
-      return {
-        start: $("#reportStart").value || dateKey(getWeekRange(todayLocal()).start),
-        end: $("#reportEnd").value || dateKey(getWeekRange(todayLocal()).end)
-      };
-    }
-
-    function exportDataPackage() {
-      const { start, end } = currentExportRange();
-      const scopedAttempts = attempts.filter((attempt) => attempt.date >= start && attempt.date <= end);
-      const scopedTasks = {};
-      Object.entries(dailyTasks).forEach(([key, task]) => {
-        const [, date] = key.split("|");
-        if (date >= start && date <= end) scopedTasks[key] = task;
-      });
-      return {
-        app: "ds-ops-metrics",
-        version: 1,
-        exportedAt: new Date().toISOString(),
-        range: { start, end },
-        attempts: scopedAttempts,
-        dailyTasks: scopedTasks
-      };
-    }
-
-    function importDataPackage(data) {
-      if (!data || data.app !== "ds-ops-metrics") throw new Error("This is not a DS Ops Metrics export file.");
-      if (!Array.isArray(data.attempts) || !data.dailyTasks || typeof data.dailyTasks !== "object") {
-        throw new Error("The export file is missing attempts or daily metrics.");
-      }
-
-      const attemptMap = new Map(attempts.map((attempt) => [attempt.id, attempt]));
-      data.attempts.forEach((attempt) => {
-        if (!attempt.id) attempt.id = `import-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-        attemptMap.set(attempt.id, attempt);
-      });
-      attempts = Array.from(attemptMap.values());
-
-      Object.entries(data.dailyTasks).forEach(([key, task]) => {
-        dailyTasks[key] = { ...(dailyTasks[key] || {}), ...task };
-      });
-
-      saveAll();
-      render();
-      return { attempts: data.attempts.length, days: Object.keys(data.dailyTasks).length };
+      const range = getOverviewRange();
+      return { start: range.start, end: range.end };
     }
 
     function csvCell(value) {
@@ -1242,6 +1310,74 @@
       render();
     }
 
+    function showLogin(message = "") {
+      document.body.classList.add("is-locked");
+      isOnline = false;
+      const error = $("#loginError");
+      error.textContent = message;
+      error.classList.toggle("visible", Boolean(message));
+      setSaveStatus("Login required");
+    }
+
+    async function unlockApp() {
+      await loadServerData();
+      document.body.classList.remove("is-locked");
+      switchView("newAttempt");
+      render();
+    }
+
+    async function checkSession() {
+      try {
+        const response = await fetch("/api/session", { credentials: "same-origin" });
+        if (!response.ok) {
+          showLogin();
+          return;
+        }
+        await unlockApp();
+      } catch {
+        showLogin("Online login is available after this folder is deployed to Vercel.");
+      }
+    }
+
+    $("#loginForm").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const error = $("#loginError");
+      error.classList.remove("visible");
+      error.textContent = "";
+      const button = event.currentTarget.querySelector("button");
+      button.disabled = true;
+      button.textContent = "Logging in...";
+      try {
+        const response = await fetch("/api/session", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ email: $("#loginEmail").value.trim(), password: $("#loginPassword").value })
+        });
+        if (!response.ok) {
+          const detail = await response.json().catch(() => ({}));
+          throw new Error(detail.error || "That login did not work.");
+        }
+        $("#loginPassword").value = "";
+        await unlockApp();
+      } catch (loginError) {
+        showLogin(loginError.message || "That login did not work.");
+      } finally {
+        button.disabled = false;
+        button.textContent = "Log In";
+      }
+    });
+
+    $("#logoutBtn").addEventListener("click", async () => {
+      await fetch("/api/logout", { method: "POST", credentials: "same-origin" }).catch(() => {});
+      localStorage.removeItem(attemptStorageKey);
+      localStorage.removeItem(taskStorageKey);
+      attempts = [];
+      dailyTasks = {};
+      showLogin();
+      render();
+    });
+
     document.querySelectorAll(".tab").forEach((tab) => {
       tab.addEventListener("click", () => switchView(tab.dataset.view));
     });
@@ -1259,9 +1395,7 @@
         reason: $("#reason").value,
         note: $("#note").value.trim()
       });
-      const task = getTask($("#owner").value, $("#date").value);
-      task.attempts = Number(task.attempts || 0) + 1;
-      if ($("#result").value === "Settled!") task.settled = Number(task.settled || 0) + 1;
+      getTask($("#owner").value, $("#date").value);
       saveAll();
       resetAttemptForm();
       switchView("log");
@@ -1274,7 +1408,7 @@
       const date = $("#dailyDate").value;
       const task = getTask(owner, date);
       document.querySelectorAll("[data-task]").forEach((input) => {
-        const metric = [...autoMetrics, ...manualMetrics].find((item) => item.key === input.dataset.task);
+        const metric = manualMetrics.find((item) => item.key === input.dataset.task);
         task[input.dataset.task] = metric?.type === "text" ? input.value.trim() : Number(input.value || 0);
       });
       saveAll();
@@ -1347,29 +1481,8 @@
       exportCsv(`ds-ops-range-report-${start}-to-${end}.csv`, header, rows);
     });
 
-    $("#exportDataBtn").addEventListener("click", () => {
-      const { start, end } = currentExportRange();
-      downloadJson(`ds-ops-data-${start}-to-${end}.json`, exportDataPackage());
-    });
-
-    $("#importDataBtn").addEventListener("click", () => $("#importDataFile").click());
-
-    $("#importDataFile").addEventListener("change", async (event) => {
-      const file = event.target.files[0];
-      if (!file) return;
-      try {
-        const data = JSON.parse(await file.text());
-        const result = importDataPackage(data);
-        window.alert(`Imported ${result.attempts} settlement attempts and ${result.days} daily metric rows.`);
-      } catch (error) {
-        window.alert(error.message || "Could not import this file.");
-      } finally {
-        event.target.value = "";
-      }
-    });
-
     init();
-    loadServerData();
+    checkSession();
   </script>
 </body>
 </html>

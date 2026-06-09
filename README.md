@@ -1,44 +1,47 @@
-# DS Ops Metrics - Vercel Static Deploy
+# DS Ops Metrics - Online Vercel Version
 
-This folder is ready to deploy to Vercel as a static website.
+This folder is now the online-saving version of DS Ops Metrics.
 
-## What Is Included
+## What Changed
 
-- `index.html`: the DS Ops Metrics app.
-- `vercel.json`: Vercel settings for clean URLs and basic browser safety headers.
+- Users must log in before they can see metrics.
+- Shared metrics save online through a private Vercel Blob store.
+- The main screen is `Add Entries` for settlement attempts and daily metrics.
+- `Negotiation Attempts` and `SUCCESSFUL Negotiation` are calculated from settlement attempts.
+- The import-team-data workflow was removed.
+- The current workbook data from `DS Ops team Metrics (2).xlsx` is seeded server-side.
 
-## How To Deploy
+## Required Vercel Setup
 
-Vercel deploys projects from Git providers or from the Vercel CLI. Because this computer does not currently have a usable Node/npm/Vercel CLI setup, the simplest path is GitHub:
+Before redeploying, add these to your Vercel project:
 
-1. Create a new GitHub repository.
-2. Upload the files from this `vercel-deploy` folder into that repository.
-3. In Vercel, choose `Add New` then `Project`.
-4. Import the GitHub repository.
-5. Use these project settings:
-   - Framework Preset: `Other`
-   - Build Command: leave blank
-   - Output Directory: leave blank
-   - Install Command: leave blank
-6. Click `Deploy`.
+1. Create a private Vercel Blob store:
+   - Open your Vercel project.
+   - Go to `Storage`.
+   - Choose `Create Database`.
+   - Choose `Blob`.
+   - Choose `Private`.
+   - Connect it to this project.
+   - Vercel should add `BLOB_READ_WRITE_TOKEN` automatically.
 
-## Important Data Note
+2. Add environment variables:
+   - `APP_EMAIL`
+   - `APP_PASSWORD`
+   - `SESSION_SECRET`
 
-This static version saves data in each person's browser. That means:
+Use your shared team login for `APP_EMAIL` and `APP_PASSWORD`. Use a long random value for `SESSION_SECRET`.
 
-- The website can be accessed without your computer being on.
-- Each team member can enter their own data.
-- Data is not automatically shared back to you unless you add a shared database later.
-- For now, team members can still use `Export My Data`, and you can use `Import Team Data`.
+## Deploy Settings
 
-For the true time-saving version, the next upgrade should connect this app to Google Sheets or a small database so everyone writes to the same source automatically.
+Use the same project/repository you already deployed.
 
-## Optional CLI Path
+- Framework Preset: `Other`
+- Build Command: leave blank
+- Output Directory: leave blank
+- Install Command: leave blank
 
-If Node.js and the Vercel CLI are installed later, this folder can also be deployed from a terminal:
+After the files are pushed or uploaded, redeploy the project.
 
-```powershell
-vercel login
-vercel --cwd "C:\Users\Hinten\Documents\Codex\2026-05-07\files-mentioned-by-the-user-ds\vercel-deploy"
-vercel --prod --cwd "C:\Users\Hinten\Documents\Codex\2026-05-07\files-mentioned-by-the-user-ds\vercel-deploy"
-```
+## Important
+
+This stores the shared app data as one private JSON file in Vercel Blob. It is a good simple version for a small team. If the team grows or you need audit logs, individual user accounts, or high-volume editing, the next upgrade should move the data into a database such as Supabase or Neon Postgres.

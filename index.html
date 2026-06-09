@@ -1,0 +1,1375 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DS Ops Metrics</title>
+  <style>
+    :root {
+      --ink: #17211d;
+      --muted: #62706a;
+      --line: #d8e1dc;
+      --paper: #fbfcfa;
+      --panel: #ffffff;
+      --field: #f6f8f6;
+      --green: #1f7a4d;
+      --green-soft: #dff2e8;
+      --blue: #276b8f;
+      --blue-soft: #e1f0f7;
+      --gold: #9c7417;
+      --gold-soft: #fff2cc;
+      --red: #b3443d;
+      --red-soft: #fae5e2;
+      --shadow: 0 16px 48px rgba(23, 33, 29, .08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background:
+        linear-gradient(180deg, rgba(223, 242, 232, .82), rgba(251, 252, 250, 0) 320px),
+        var(--paper);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    button, input, select, textarea { font: inherit; }
+    button { border: 0; cursor: pointer; }
+
+    .shell {
+      width: min(1680px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 24px 0 36px;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 18px;
+      align-items: end;
+      margin-bottom: 16px;
+    }
+
+    .eyebrow {
+      color: var(--green);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(30px, 4vw, 54px);
+      line-height: 1;
+    }
+
+    .subhead {
+      margin: 10px 0 0;
+      color: var(--muted);
+      max-width: 860px;
+      line-height: 1.45;
+    }
+
+    .header-actions, .filters, .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .header-actions { justify-content: flex-end; }
+
+    .tabs {
+      margin: 0 0 18px;
+      padding: 5px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, .78);
+      border-radius: 8px;
+      width: fit-content;
+      max-width: 100%;
+    }
+
+    .nav-row {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+
+    .tab {
+      min-height: 38px;
+      padding: 0 12px;
+      border-radius: 7px;
+      background: transparent;
+      color: var(--muted);
+      font-weight: 800;
+    }
+
+    .tab.active {
+      background: var(--ink);
+      color: white;
+    }
+
+    .add-entry-tab {
+      background: var(--green);
+      color: white;
+      min-height: 48px;
+      padding: 0 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .add-entry-tab.active {
+      background: var(--green);
+      color: white;
+    }
+
+    .btn {
+      min-height: 42px;
+      border-radius: 8px;
+      padding: 0 14px;
+      background: var(--ink);
+      color: white;
+      font-weight: 800;
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+      justify-content: center;
+      white-space: nowrap;
+    }
+
+    .btn.secondary {
+      background: white;
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+
+    .btn.danger {
+      color: var(--red);
+      background: var(--red-soft);
+    }
+
+    .view { display: none; }
+    .view.active { display: block; }
+
+    .panel {
+      background: rgba(255, 255, 255, .92);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel + .panel { margin-top: 18px; }
+
+    .panel-head {
+      padding: 16px 18px 12px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .panel-head.stack {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    h2, h3 { margin: 0; }
+    h2 { font-size: 18px; }
+    h3 { font-size: 15px; }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .metric {
+      min-height: 116px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: white;
+      padding: 16px;
+      box-shadow: var(--shadow);
+      display: grid;
+      align-content: space-between;
+    }
+
+    .metric span, label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .metric strong {
+      display: block;
+      margin-top: 10px;
+      font-size: 34px;
+      line-height: 1;
+    }
+
+    .metric small {
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .overview-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .overview-controls {
+      margin-bottom: 18px;
+    }
+
+    .custom-range {
+      display: none;
+    }
+
+    .custom-range.visible {
+      display: inline-flex;
+    }
+
+    .settings-panel {
+      display: none;
+      margin-bottom: 18px;
+    }
+
+    .settings-panel.visible {
+      display: block;
+    }
+
+    .form {
+      padding: 18px;
+      display: grid;
+      gap: 13px;
+    }
+
+    .entry-form {
+      max-width: 920px;
+    }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .task-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--field);
+      color: var(--ink);
+      padding: 10px 11px;
+      outline: none;
+      letter-spacing: 0;
+    }
+
+    textarea {
+      min-height: 80px;
+      resize: vertical;
+      line-height: 1.35;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 3px rgba(31, 122, 77, .12);
+    }
+
+    .filters select, .filters input {
+      width: auto;
+      min-width: 160px;
+      background: white;
+    }
+
+    .table-wrap {
+      width: 100%;
+      overflow: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+    }
+
+    .attempt-table {
+      table-layout: fixed;
+      min-width: 1080px;
+    }
+
+    .report-table {
+      min-width: 1180px;
+    }
+
+    th, td {
+      padding: 11px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+      vertical-align: top;
+      font-size: 13px;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 11px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      background: #f7faf8;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    td {
+      overflow-wrap: anywhere;
+    }
+
+    td.note {
+      color: var(--muted);
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      padding: 4px 9px;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--green);
+      background: var(--green-soft);
+      white-space: nowrap;
+    }
+
+    .pill.blue {
+      color: var(--blue);
+      background: var(--blue-soft);
+    }
+
+    .pill.gold {
+      color: var(--gold);
+      background: var(--gold-soft);
+    }
+
+    .row-actions {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .icon-btn {
+      min-width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: var(--red-soft);
+      color: var(--red);
+      font-weight: 900;
+      padding: 0 9px;
+    }
+
+    .danger-confirm {
+      width: auto;
+      min-width: 74px;
+    }
+
+    .combined-grid {
+      padding: 16px 18px 18px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .person {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: white;
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .person-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .person strong { font-size: 18px; }
+
+    .person-stats {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .person-stats b {
+      display: block;
+      color: var(--ink);
+      font-size: 20px;
+      margin-top: 2px;
+    }
+
+    .chart {
+      padding: 16px 18px 18px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .bar-row {
+      display: grid;
+      grid-template-columns: minmax(140px, 220px) 1fr 42px;
+      gap: 10px;
+      align-items: center;
+      min-height: 30px;
+    }
+
+    .bar-label {
+      font-weight: 800;
+      font-size: 13px;
+      overflow-wrap: anywhere;
+    }
+
+    .bar-track {
+      height: 12px;
+      border-radius: 999px;
+      background: #edf2ef;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--green), var(--blue));
+      min-width: 4px;
+    }
+
+    .bar-value {
+      color: var(--muted);
+      font-weight: 800;
+      text-align: right;
+      font-size: 13px;
+    }
+
+    .empty {
+      padding: 22px;
+      color: var(--muted);
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .helper {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    @media (max-width: 1180px) {
+      .metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .overview-grid { grid-template-columns: 1fr; }
+      .combined-grid { grid-template-columns: 1fr; }
+      .task-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 720px) {
+      .shell { width: min(100% - 20px, 1680px); padding-top: 14px; }
+      header { grid-template-columns: 1fr; }
+      .header-actions { justify-content: stretch; }
+      .btn { flex: 1; }
+      .field-grid, .task-grid, .metrics-grid { grid-template-columns: 1fr; }
+      .filters select, .filters input { width: 100%; }
+      .tabs { width: 100%; }
+      .tab { flex: 1; }
+      .nav-row { flex-direction: column; }
+      .add-entry-tab { width: 100%; }
+      .bar-row { grid-template-columns: 1fr 42px; }
+      .bar-track { grid-column: 1 / -1; grid-row: 2; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div>
+        <div class="eyebrow">Debt settlement operations</div>
+        <h1>DS Ops Metrics</h1>
+        <p class="subhead">Settlement attempts feed the main metrics automatically. The other daily task counts are manually editable for now and roll into daily and weekly reports.</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn secondary" id="exportAttemptsBtn" type="button">Export Attempts</button>
+        <button class="btn secondary" id="exportWeeklyBtn" type="button">Export Report</button>
+        <button class="btn secondary" id="exportDataBtn" type="button">Export My Data</button>
+        <button class="btn secondary" id="importDataBtn" type="button">Import Team Data</button>
+        <input id="importDataFile" type="file" accept=".json,application/json" hidden>
+        <button class="btn secondary" id="settingsBtn" type="button">Settings</button>
+      </div>
+    </header>
+
+    <div class="nav-row">
+      <nav class="tabs" aria-label="Views">
+        <button class="tab active" data-view="overview" type="button">Overview</button>
+        <button class="tab" data-view="daily" type="button">Reports</button>
+        <button class="tab" data-view="log" type="button">Settlement Log</button>
+      </nav>
+      <button class="tab add-entry-tab" data-view="newAttempt" type="button">Add Entries</button>
+    </div>
+
+    <section class="panel settings-panel" id="settingsPanel">
+      <div class="panel-head stack">
+        <h2>Time Estimate Settings</h2>
+        <p class="helper">Edit the minutes used to calculate time estimates for each task.</p>
+      </div>
+      <form class="form" id="settingsForm">
+        <div class="task-grid" id="timeEstimateFields"></div>
+        <button class="btn" type="submit">Save Time Estimates</button>
+      </form>
+    </section>
+
+    <section class="view active" id="overviewView">
+      <section class="panel overview-controls">
+        <div class="panel-head stack">
+          <h2>Team Performance Overview</h2>
+          <div class="filters">
+            <select id="overviewPeriod">
+              <option value="week">This week</option>
+              <option value="all">All time</option>
+              <option value="today">Today</option>
+              <option value="month">This month</option>
+              <option value="custom">Custom date range</option>
+            </select>
+            <span class="custom-range" id="overviewCustomRange">
+              <input id="overviewStart" type="date" aria-label="Overview start date">
+              <input id="overviewEnd" type="date" aria-label="Overview end date">
+            </span>
+          </div>
+          <p class="helper" id="overviewRangeLabel">Current week</p>
+        </div>
+      </section>
+
+      <div class="metrics-grid">
+        <article class="metric"><span>Settlement attempts</span><strong id="totalAttempts">0</strong><small>Auto from attempt log</small></article>
+        <article class="metric"><span>Successful negotiations</span><strong id="settledCount">0</strong><small id="settledRate">0% success rate</small></article>
+        <article class="metric"><span>Client approved offers</span><strong id="clientApprovedCount">0</strong><small>Manual daily task count</small></article>
+        <article class="metric"><span>Creditor/client comms</span><strong id="commsCount">0</strong><small>Manual daily task count</small></article>
+        <article class="metric"><span>Hours worked</span><strong id="weekCount">0</strong><small id="weekRange">Estimated hours</small></article>
+      </div>
+
+      <div class="overview-grid">
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Team Metrics Sheet</h2>
+            <span class="pill blue" id="combinedRecordCount">0 rows</span>
+          </div>
+          <div class="table-wrap">
+            <table class="report-table">
+              <thead id="overviewTeamHead"></thead>
+              <tbody id="overviewTeamRows"></tbody>
+            </table>
+          </div>
+        </section>
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Results</h2>
+            <span class="pill gold" id="topResult">No result yet</span>
+          </div>
+          <div class="chart" id="resultChart"></div>
+        </section>
+      </div>
+    </section>
+
+    <section class="view" id="newAttemptView">
+      <section class="panel entry-form">
+        <div class="panel-head stack">
+          <h2>New Settlement Attempt</h2>
+          <p class="helper">Each entry automatically increases negotiation attempts for that owner and date. "Settled!" also increases successful negotiations.</p>
+        </div>
+        <form class="form" id="attemptForm">
+          <div class="field-grid">
+            <label>Owner
+              <select id="owner" required></select>
+            </label>
+            <label>Date
+              <input id="date" type="date" required>
+            </label>
+          </div>
+          <div class="field-grid">
+            <label>Time
+              <input id="time" type="time" required>
+            </label>
+            <label>Result
+              <select id="result" required></select>
+            </label>
+          </div>
+          <div class="field-grid">
+            <label>Client
+              <input id="client" type="text" autocomplete="off" placeholder="Client name" required>
+            </label>
+            <label>Creditor
+              <input id="creditor" type="text" autocomplete="off" placeholder="Creditor or agency" required>
+            </label>
+          </div>
+          <label>Reason
+            <select id="reason"></select>
+          </label>
+          <label>Note
+            <textarea id="note" placeholder="Optional details"></textarea>
+          </label>
+          <button class="btn" type="submit">Add Attempt</button>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head stack">
+          <h2>Daily Metric Entry</h2>
+          <div class="filters">
+            <select id="dailyOwner"></select>
+            <input id="dailyDate" type="date">
+            <span class="pill blue" id="editingDayBadge">Editing today</span>
+          </div>
+          <p class="helper">Add daily team metrics here. Click an edit button from Reports to load a specific owner and day.</p>
+        </div>
+        <form class="form" id="dailyTaskForm">
+          <div class="metrics-grid">
+            <article class="metric"><span>Negotiation attempts</span><strong id="dailyAttempts">0</strong><small>Auto</small></article>
+            <article class="metric"><span>Successful negotiations</span><strong id="dailySettled">0</strong><small>Auto</small></article>
+            <article class="metric"><span>Offers submitted</span><strong id="dailyOffers">0</strong><small>Auto from attempt result</small></article>
+            <article class="metric"><span>SIF/PIF received</span><strong id="dailySifCard">0</strong><small>Manual</small></article>
+            <article class="metric"><span>Time estimate</span><strong id="dailyHours">0.0</strong><small>Hours</small></article>
+          </div>
+          <div class="task-grid" id="manualTaskFields"></div>
+          <button class="btn" type="submit">Save Daily Tasks</button>
+        </form>
+      </section>
+    </section>
+
+    <section class="view" id="dailyView">
+      <section class="panel">
+        <div class="panel-head stack">
+          <h2>Date Range Report</h2>
+          <div class="filters">
+            <input id="reportStart" type="date" aria-label="Report start date">
+            <input id="reportEnd" type="date" aria-label="Report end date">
+            <select id="rangeOwnerFilter">
+              <option value="all">All owners</option>
+            </select>
+          </div>
+          <p class="helper">Defaults to the current week. Pick any start and end date to see daily, weekly, or custom range totals.</p>
+        </div>
+        <div class="table-wrap">
+          <table class="report-table">
+            <thead id="rangeHead"></thead>
+            <tbody id="rangeRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Selected Day Attempts</h2>
+          <span class="pill blue" id="dailyAttemptCount">0 attempts</span>
+        </div>
+        <div class="table-wrap">
+          <table class="attempt-table">
+            <thead id="dailyAttemptHead"></thead>
+            <tbody id="dailyAttemptRows"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <section class="view" id="logView">
+      <section class="panel">
+        <div class="panel-head stack">
+          <h2>Settlement Attempt Log</h2>
+          <div class="filters">
+            <select id="ownerFilter"><option value="all">All owners</option></select>
+            <select id="resultFilter"><option value="all">All results</option></select>
+            <input id="search" type="search" placeholder="Search client or creditor">
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="attempt-table">
+            <thead id="attemptHead"></thead>
+            <tbody id="attemptRows"></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const attemptStorageKey = "dsOpsSettlementAttempts.v4";
+    const taskStorageKey = "dsOpsDailyMetrics.v2";
+    const timeEstimateStorageKey = "dsOpsTimeEstimates.v1";
+    const owners = ["Ges", "Ron", "Bon"];
+    const results = ["Settled!", "Offer Submitted", "No connection", "Client not enough funds", "Creditor Not ready to Settle", "No POA", "Account transferred to other creditor", "Settlements too high", "Client declined", "Need POA", "Follow up", "Other"];
+    const reasons = ["", "Waiting on creditor approval", "Waiting on client approval", "Insufficient client funds", "Could not reach creditor", "Account not eligible yet", "POA needed", "Transferred to other creditor", "Settlement amount too high", "Payment schedule pending"];
+    const manualMetrics = [
+      { key: "clientApproved", label: "CLIENT Approved Offer", minutes: 0 },
+      { key: "sifPif", label: "SIF/PIF Received from Creditor", minutes: 5 },
+      { key: "creditorComms", label: "Creditors Emails/Calls/Fax", minutes: 10 },
+      { key: "clientComms", label: "Client Emails/Calls/Texts", minutes: 15 },
+      { key: "poasSent", label: "POAs Sent", minutes: 0 },
+      { key: "poasConfirmed", label: "POAs Confirmed", minutes: 0 },
+      { key: "escalations", label: "Escalations", minutes: 5 },
+      { key: "dsManFu", label: "DS MAN FU", minutes: 10 },
+      { key: "paymentsFees", label: "Settlement Payments/Fees Set up", minutes: 20 },
+      { key: "additionalHours", label: "Additional Hours", minutes: 60 },
+      { key: "additionalHoursNote", label: "Additional Hours Note", minutes: 0, type: "text" }
+    ];
+    const autoMetrics = [
+      { key: "attempts", label: "Negotiation Attempts", minutes: 20 },
+      { key: "settled", label: "SUCCESSFUL Negotiation", minutes: 10 }
+    ];
+    const reportColumns = [...autoMetrics, { key: "successRate", label: "Successful Negotiation %" }, ...manualMetrics, { key: "hours", label: "Time Estimate (Hrs)" }];
+    const seedAttempts = [
+    {
+        "id":  "csv-1",
+        "owner":  "Ges",
+        "date":  "2026-04-27",
+        "time":  "13:50",
+        "client":  "Tammy Woodall",
+        "creditor":  "Halsted Financial",
+        "result":  "Offer Submitted",
+        "reason":  "Waiting on creditor approval",
+        "note":  ""
+    }
+    ];
+    const seedTasks = {};
+
+    const $ = (selector) => document.querySelector(selector);
+    let attempts = loadJson(attemptStorageKey, cloneSeedAttempts());
+    let dailyTasks = loadJson(taskStorageKey, cloneSeedTasks());
+    applySavedTimeEstimates();
+
+    function loadJson(key, fallback) {
+      try {
+        const saved = JSON.parse(localStorage.getItem(key) || "null");
+        return saved || fallback;
+      } catch {
+        return fallback;
+      }
+    }
+
+    function cloneSeedAttempts() {
+      return seedAttempts.map((attempt) => ({ ...attempt }));
+    }
+
+    function cloneSeedTasks() {
+      return Object.fromEntries(Object.entries(seedTasks).map(([key, value]) => [key, { ...value }]));
+    }
+
+    function allMetricDefinitions() {
+      return [...autoMetrics, ...manualMetrics].filter((metric) => metric.type !== "text");
+    }
+
+    function applySavedTimeEstimates() {
+      const saved = loadJson(timeEstimateStorageKey, {});
+      [...autoMetrics, ...manualMetrics].forEach((metric) => {
+        if (metric.type === "text") return;
+        if (saved[metric.key] !== undefined) metric.minutes = Number(saved[metric.key] || 0);
+      });
+    }
+
+    function saveAll() {
+      localStorage.setItem(attemptStorageKey, JSON.stringify(attempts));
+      localStorage.setItem(taskStorageKey, JSON.stringify(dailyTasks));
+      saveServerData();
+    }
+
+    async function loadServerData() {}
+    async function saveServerData() {}
+
+    function todayLocal() {
+      const now = new Date();
+      const offset = now.getTimezoneOffset();
+      return new Date(now.getTime() - offset * 60000).toISOString().slice(0, 10);
+    }
+
+    function timeLocal() {
+      const now = new Date();
+      return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    }
+
+    function getWeekRange(dateString) {
+      const date = new Date(`${dateString}T12:00:00`);
+      const day = date.getDay();
+      const mondayOffset = day === 0 ? -6 : 1 - day;
+      const start = new Date(date);
+      start.setDate(date.getDate() + mondayOffset);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      return { start, end };
+    }
+
+    function dateKey(date) {
+      return date.toISOString().slice(0, 10);
+    }
+
+    function dateRangeKeys(start, end) {
+      const dates = [];
+      const cursor = new Date(`${start}T12:00:00`);
+      const last = new Date(`${end}T12:00:00`);
+      while (cursor <= last) {
+        dates.push(dateKey(cursor));
+        cursor.setDate(cursor.getDate() + 1);
+      }
+      return dates;
+    }
+
+    function formatDate(dateString) {
+      return new Date(`${dateString}T12:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+    }
+
+    function formatWeekLabel(range) {
+      const start = range.start.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      const end = range.end.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+      return `${start} to ${end}`;
+    }
+
+    function getOverviewRange() {
+      const period = $("#overviewPeriod").value;
+      const today = todayLocal();
+      if (period === "all") return { start: "0000-01-01", end: "9999-12-31", label: "All time" };
+      if (period === "today") return { start: today, end: today, label: formatDate(today) };
+      if (period === "month") {
+        const date = new Date(`${today}T12:00:00`);
+        const start = new Date(date.getFullYear(), date.getMonth(), 1, 12);
+        const end = new Date(date.getFullYear(), date.getMonth() + 1, 0, 12);
+        return { start: dateKey(start), end: dateKey(end), label: `${start.toLocaleDateString(undefined, { month: "short", day: "numeric" })} to ${end.toLocaleDateString(undefined, { month: "short", day: "numeric" })}` };
+      }
+      if (period === "custom") {
+        const start = $("#overviewStart").value || today;
+        const end = $("#overviewEnd").value || start;
+        return { start, end, label: `${formatDate(start)} to ${formatDate(end)}` };
+      }
+      const range = getWeekRange(today);
+      return { start: dateKey(range.start), end: dateKey(range.end), label: formatWeekLabel(range) };
+    }
+
+    function taskKey(owner, date) {
+      return `${owner}|${date}`;
+    }
+
+    function getTask(owner, date) {
+      const key = taskKey(owner, date);
+      if (!dailyTasks[key]) dailyTasks[key] = emptyReportTotals();
+      return dailyTasks[key];
+    }
+
+    function attemptsFor(owner, start, end) {
+      return attempts.filter((attempt) => {
+        const ownerMatch = !owner || owner === "all" || attempt.owner === owner;
+        return ownerMatch && attempt.date >= start && attempt.date <= end;
+      });
+    }
+
+    function dailyRollup(owner, date) {
+      const dayAttempts = attemptsFor(owner, date, date);
+      const task = getTask(owner, date);
+      const rollup = {
+        attempts: Number(task.attempts || 0),
+        settled: Number(task.settled || 0),
+        offers: dayAttempts.filter((attempt) => attempt.result === "Offer Submitted").length
+      };
+      manualMetrics.forEach((metric) => {
+        rollup[metric.key] = metric.type === "text" ? String(task[metric.key] || "") : Number(task[metric.key] || 0);
+      });
+      return normalizeRollup(rollup);
+    }
+
+    function rangeRollup(owner, start, end) {
+      const totals = emptyReportTotals();
+      Object.entries(dailyTasks).forEach(([key, task]) => {
+        const [taskOwner, date] = key.split("|");
+        const ownerMatch = !owner || owner === "all" || taskOwner === owner;
+        if (!ownerMatch || date < start || date > end) return;
+        autoMetrics.forEach((metric) => totals[metric.key] += Number(task[metric.key] || 0));
+        manualMetrics.forEach((metric) => {
+          if (metric.type === "text") {
+            const note = String(task[metric.key] || "").trim();
+            if (note) totals[metric.key] = totals[metric.key] ? `${totals[metric.key]}; ${note}` : note;
+          } else {
+            totals[metric.key] += Number(task[metric.key] || 0);
+          }
+        });
+      });
+      totals.successRate = totals.attempts ? Math.round((totals.settled / totals.attempts) * 100) : 0;
+      totals.hours = estimateHours(totals);
+      return totals;
+    }
+
+    function normalizeRollup(row) {
+      row.successRate = row.attempts ? Math.round((row.settled / row.attempts) * 100) : null;
+      row.hours = estimateHours(row);
+      return row;
+    }
+
+    function emptyReportTotals() {
+      const totals = { offers: 0 };
+      autoMetrics.forEach((metric) => totals[metric.key] = 0);
+      manualMetrics.forEach((metric) => totals[metric.key] = metric.type === "text" ? "" : 0);
+      totals.successRate = 0;
+      totals.hours = 0;
+      return totals;
+    }
+
+    function formatReportValue(column, totals) {
+      if (column.key === "hours") return totals[column.key].toFixed(1);
+      if (column.key === "successRate") return totals[column.key] === null ? "N/A" : `${totals[column.key]}%`;
+      if (column.type === "text") return escapeHtml(totals[column.key] || "");
+      return totals[column.key];
+    }
+
+    function estimateHours(row) {
+      const minutes = allMetricDefinitions().reduce((sum, metric) => sum + (Number(row[metric.key] || 0) * metric.minutes), 0);
+      return Number((minutes / 60).toFixed(1));
+    }
+
+    function countBy(items, key) {
+      return items.reduce((acc, item) => {
+        const value = item[key] || "Unspecified";
+        acc[value] = (acc[value] || 0) + 1;
+        return acc;
+      }, {});
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function fillSelect(select, values, options = {}) {
+      const leading = options.leading ? `<option value="${options.leading.value}">${options.leading.label}</option>` : "";
+      select.innerHTML = leading + values.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value || "None")}</option>`).join("");
+    }
+
+    function renderAttemptHead(target) {
+      target.innerHTML = `<tr>
+        <th style="width:110px;">Date</th><th style="width:78px;">Time</th><th style="width:82px;">Owner</th>
+        <th style="width:150px;">Client</th><th style="width:180px;">Creditor</th><th style="width:170px;">Result</th>
+        <th style="width:190px;">Reason</th><th>Note</th><th style="width:48px;"></th>
+      </tr>`;
+    }
+
+    function renderAttemptRows(target, rows, showDelete = true) {
+      if (!rows.length) {
+        target.innerHTML = `<tr><td class="empty" colspan="9">No attempts match this view.</td></tr>`;
+        return;
+      }
+      target.innerHTML = rows.map((attempt) => `
+        <tr>
+          <td>${formatDate(attempt.date)}</td>
+          <td>${attempt.time || ""}</td>
+          <td><span class="pill">${attempt.owner}</span></td>
+          <td>${escapeHtml(attempt.client)}</td>
+          <td>${escapeHtml(attempt.creditor)}</td>
+          <td>${escapeHtml(attempt.result)}</td>
+          <td>${escapeHtml(attempt.reason || "")}</td>
+          <td class="note">${escapeHtml(attempt.note || "")}</td>
+          <td class="row-actions">${showDelete ? `<button class="icon-btn" data-prepare-delete="${attempt.id}" title="Show delete confirmation" type="button">...</button>` : ""}</td>
+        </tr>
+      `).join("");
+    }
+
+    function getFilteredAttempts() {
+      const owner = $("#ownerFilter").value;
+      const result = $("#resultFilter").value;
+      const search = $("#search").value.trim().toLowerCase();
+      return attempts
+        .filter((attempt) => owner === "all" || attempt.owner === owner)
+        .filter((attempt) => result === "all" || attempt.result === result)
+        .filter((attempt) => !search || `${attempt.client} ${attempt.creditor} ${attempt.reason} ${attempt.note}`.toLowerCase().includes(search))
+        .sort((a, b) => `${b.date} ${b.time}`.localeCompare(`${a.date} ${a.time}`));
+    }
+
+    function renderOverview() {
+      const range = getOverviewRange();
+      $("#overviewCustomRange").classList.toggle("visible", $("#overviewPeriod").value === "custom");
+      $("#overviewRangeLabel").textContent = range.label;
+      const totals = rangeRollup("all", range.start, range.end);
+      const clientApproved = totals.clientApproved;
+      const comms = totals.creditorComms + totals.clientComms;
+      $("#totalAttempts").textContent = totals.attempts;
+      $("#settledCount").textContent = totals.settled;
+      $("#settledRate").textContent = `${formatReportValue({ key: "successRate" }, totals)} success rate`;
+      $("#clientApprovedCount").textContent = clientApproved;
+      $("#commsCount").textContent = comms;
+      $("#weekCount").textContent = totals.hours.toFixed(1);
+      $("#weekRange").textContent = "Estimated hours";
+      $("#combinedRecordCount").textContent = `${totals.attempts} attempts`;
+      renderCombinedTeam(range);
+      renderChart(range);
+    }
+
+    function renderCombinedTeam(range) {
+      $("#overviewTeamHead").innerHTML = `<tr><th>Owner</th>${reportColumns.map((column) => `<th>${column.label}</th>`).join("")}</tr>`;
+      const rows = [...owners, "Total"].map((owner) => {
+        const totals = rangeRollup(owner === "Total" ? "all" : owner, range.start, range.end);
+        return `<tr>
+          <td><strong>${owner}</strong></td>
+          ${reportColumns.map((column) => `<td>${formatReportValue(column, totals)}</td>`).join("")}
+        </tr>`;
+      });
+      $("#overviewTeamRows").innerHTML = rows.join("");
+    }
+
+    function renderChart(range) {
+      const chart = $("#resultChart");
+      const scopedAttempts = attemptsFor("all", range.start, range.end);
+      const entries = Object.entries(countBy(scopedAttempts, "result")).sort((a, b) => b[1] - a[1]);
+      const max = entries.length ? Math.max(...entries.map((entry) => entry[1])) : 0;
+      $("#topResult").textContent = entries.length ? `${scopedAttempts.length} attempts` : "No attempts";
+      chart.innerHTML = entries.length ? entries.map(([label, value]) => {
+        const width = max ? Math.max(4, Math.round((value / max) * 100)) : 0;
+        const pct = scopedAttempts.length ? Math.round((value / scopedAttempts.length) * 100) : 0;
+        return `<div class="bar-row"><div class="bar-label">${escapeHtml(label)}</div><div class="bar-track"><div class="bar-fill" style="width:${width}%"></div></div><div class="bar-value">${value} (${pct}%)</div></div>`;
+      }).join("") : `<div class="empty">No results to chart.</div>`;
+    }
+
+    function renderDaily() {
+      const owner = $("#dailyOwner").value;
+      const date = $("#dailyDate").value;
+      const rollup = dailyRollup(owner, date);
+      $("#editingDayBadge").textContent = `Editing ${owner} - ${formatDate(date)}`;
+      $("#dailyAttempts").textContent = rollup.attempts;
+      $("#dailySettled").textContent = rollup.settled;
+      $("#dailyOffers").textContent = rollup.offers;
+      $("#dailySifCard").textContent = rollup.sifPif;
+      $("#dailyHours").textContent = rollup.hours.toFixed(1);
+      const task = getTask(owner, date);
+      $("#manualTaskFields").innerHTML = [...autoMetrics, ...manualMetrics].map((metric) => `
+        <label>${metric.label}
+          <input type="text" ${metric.type === "text" ? "" : 'inputmode="numeric" pattern="[0-9]*"'} data-task="${metric.key}" value="${metric.type === "text" ? escapeHtml(task[metric.key] || "") : Number(task[metric.key] || 0)}">
+        </label>
+      `).join("");
+      const rows = attemptsFor("all", date, date).sort((a, b) => `${b.date} ${b.time}`.localeCompare(`${a.date} ${a.time}`));
+      $("#dailyAttemptCount").textContent = `${rows.length} attempts on ${formatDate(date)}`;
+      renderAttemptHead($("#dailyAttemptHead"));
+      renderAttemptRows($("#dailyAttemptRows"), rows, false);
+      renderRangeReport();
+    }
+
+    function renderRangeHead() {
+      $("#rangeHead").innerHTML = `<tr><th>Owner</th><th>Date</th>${reportColumns.map((column) => `<th>${column.label}</th>`).join("")}<th>Edit</th></tr>`;
+    }
+
+    function renderRangeReport() {
+      renderRangeHead();
+      const start = $("#reportStart").value;
+      const end = $("#reportEnd").value;
+      const filter = $("#rangeOwnerFilter").value;
+      const ownerList = filter === "all" ? owners : [filter];
+      const dailyRows = [];
+      dateRangeKeys(start, end).forEach((date) => {
+        ownerList.forEach((owner) => {
+          const totals = dailyRollup(owner, date);
+          const hasActivity = reportColumns.some((column) => Number(totals[column.key] || 0) > 0);
+          if (hasActivity) dailyRows.push({ owner, date, totals });
+        });
+      });
+      const totalRows = filter === "all" ? [...owners, "Total"] : [filter];
+      const summaryRows = totalRows.map((owner) => {
+        const totals = rangeRollup(owner === "Total" ? "all" : owner, start, end);
+        return { owner, date: `${formatDate(start)} to ${formatDate(end)}`, totals, summary: true };
+      });
+      const rows = [...dailyRows, ...summaryRows];
+      $("#rangeRows").innerHTML = rows.map((row) => {
+        return `<tr>
+          <td><strong>${row.owner}</strong></td>
+          <td>${row.summary ? row.date : formatDate(row.date)}</td>
+          ${reportColumns.map((column) => `<td>${formatReportValue(column, row.totals)}</td>`).join("")}
+          <td>${row.summary ? "" : `<button class="btn secondary" type="button" data-edit-day="${row.owner}|${row.date}">Open & Edit</button>`}</td>
+        </tr>`;
+      }).join("");
+    }
+
+    function renderLog() {
+      renderAttemptHead($("#attemptHead"));
+      renderAttemptRows($("#attemptRows"), getFilteredAttempts(), true);
+    }
+
+    function renderSettings() {
+      $("#timeEstimateFields").innerHTML = allMetricDefinitions().map((metric) => `
+        <label>${metric.label}
+          <input type="text" inputmode="numeric" pattern="[0-9]*" data-time-estimate="${metric.key}" value="${Number(metric.minutes || 0)}">
+        </label>
+      `).join("");
+    }
+
+    function render() {
+      renderOverview();
+      renderDaily();
+      renderLog();
+      renderSettings();
+    }
+
+    function resetAttemptForm() {
+      $("#date").value = todayLocal();
+      $("#time").value = timeLocal();
+      $("#client").value = "";
+      $("#creditor").value = "";
+      $("#note").value = "";
+      $("#reason").value = "";
+      $("#owner").focus();
+    }
+
+    function switchView(view) {
+      document.querySelectorAll(".tab").forEach((tab) => tab.classList.toggle("active", tab.dataset.view === view));
+      document.querySelectorAll(".view").forEach((section) => section.classList.toggle("active", section.id === `${view}View`));
+    }
+
+    function exportCsv(filename, header, rows) {
+      const csv = [header, ...rows].join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function downloadJson(filename, data) {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function currentExportRange() {
+      return {
+        start: $("#reportStart").value || dateKey(getWeekRange(todayLocal()).start),
+        end: $("#reportEnd").value || dateKey(getWeekRange(todayLocal()).end)
+      };
+    }
+
+    function exportDataPackage() {
+      const { start, end } = currentExportRange();
+      const scopedAttempts = attempts.filter((attempt) => attempt.date >= start && attempt.date <= end);
+      const scopedTasks = {};
+      Object.entries(dailyTasks).forEach(([key, task]) => {
+        const [, date] = key.split("|");
+        if (date >= start && date <= end) scopedTasks[key] = task;
+      });
+      return {
+        app: "ds-ops-metrics",
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        range: { start, end },
+        attempts: scopedAttempts,
+        dailyTasks: scopedTasks
+      };
+    }
+
+    function importDataPackage(data) {
+      if (!data || data.app !== "ds-ops-metrics") throw new Error("This is not a DS Ops Metrics export file.");
+      if (!Array.isArray(data.attempts) || !data.dailyTasks || typeof data.dailyTasks !== "object") {
+        throw new Error("The export file is missing attempts or daily metrics.");
+      }
+
+      const attemptMap = new Map(attempts.map((attempt) => [attempt.id, attempt]));
+      data.attempts.forEach((attempt) => {
+        if (!attempt.id) attempt.id = `import-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        attemptMap.set(attempt.id, attempt);
+      });
+      attempts = Array.from(attemptMap.values());
+
+      Object.entries(data.dailyTasks).forEach(([key, task]) => {
+        dailyTasks[key] = { ...(dailyTasks[key] || {}), ...task };
+      });
+
+      saveAll();
+      render();
+      return { attempts: data.attempts.length, days: Object.keys(data.dailyTasks).length };
+    }
+
+    function csvCell(value) {
+      return `"${String(value).replaceAll('"', '""')}"`;
+    }
+
+    function init() {
+      fillSelect($("#owner"), owners);
+      fillSelect($("#dailyOwner"), owners);
+      fillSelect($("#ownerFilter"), owners, { leading: { value: "all", label: "All owners" } });
+      fillSelect($("#rangeOwnerFilter"), owners, { leading: { value: "all", label: "All owners" } });
+      fillSelect($("#result"), results);
+      fillSelect($("#resultFilter"), results, { leading: { value: "all", label: "All results" } });
+      fillSelect($("#reason"), reasons);
+      $("#dailyDate").value = todayLocal();
+      const currentWeek = getWeekRange(todayLocal());
+      $("#overviewPeriod").value = "week";
+      $("#overviewStart").value = dateKey(currentWeek.start);
+      $("#overviewEnd").value = dateKey(currentWeek.end);
+      $("#reportStart").value = dateKey(currentWeek.start);
+      $("#reportEnd").value = dateKey(currentWeek.end);
+      resetAttemptForm();
+      render();
+    }
+
+    document.querySelectorAll(".tab").forEach((tab) => {
+      tab.addEventListener("click", () => switchView(tab.dataset.view));
+    });
+
+    $("#attemptForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      attempts.unshift({
+        id: `attempt-${Date.now()}`,
+        owner: $("#owner").value,
+        date: $("#date").value,
+        time: $("#time").value,
+        client: $("#client").value.trim(),
+        creditor: $("#creditor").value.trim(),
+        result: $("#result").value,
+        reason: $("#reason").value,
+        note: $("#note").value.trim()
+      });
+      const task = getTask($("#owner").value, $("#date").value);
+      task.attempts = Number(task.attempts || 0) + 1;
+      if ($("#result").value === "Settled!") task.settled = Number(task.settled || 0) + 1;
+      saveAll();
+      resetAttemptForm();
+      switchView("log");
+      render();
+    });
+
+    $("#dailyTaskForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const owner = $("#dailyOwner").value;
+      const date = $("#dailyDate").value;
+      const task = getTask(owner, date);
+      document.querySelectorAll("[data-task]").forEach((input) => {
+        const metric = [...autoMetrics, ...manualMetrics].find((item) => item.key === input.dataset.task);
+        task[input.dataset.task] = metric?.type === "text" ? input.value.trim() : Number(input.value || 0);
+      });
+      saveAll();
+      render();
+    });
+
+    $("#settingsBtn").addEventListener("click", () => {
+      $("#settingsPanel").classList.toggle("visible");
+    });
+
+    $("#settingsForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      const saved = {};
+      document.querySelectorAll("[data-time-estimate]").forEach((input) => {
+        const metric = allMetricDefinitions().find((item) => item.key === input.dataset.timeEstimate);
+        if (!metric) return;
+        metric.minutes = Number(input.value || 0);
+        saved[metric.key] = metric.minutes;
+      });
+      localStorage.setItem(timeEstimateStorageKey, JSON.stringify(saved));
+      render();
+    });
+
+    $("#attemptRows").addEventListener("click", (event) => {
+      const prepareId = event.target.dataset.prepareDelete;
+      if (prepareId) {
+        event.target.outerHTML = `<button class="icon-btn danger-confirm" data-delete="${prepareId}" title="Delete attempt" type="button">Delete</button>`;
+        return;
+      }
+      const id = event.target.dataset.delete;
+      if (!id) return;
+      const confirmed = window.confirm("Delete this settlement attempt? This should only be used for duplicate or incorrect entries.");
+      if (!confirmed) return;
+      attempts = attempts.filter((attempt) => attempt.id !== id);
+      saveAll();
+      render();
+    });
+
+    $("#rangeRows").addEventListener("click", (event) => {
+      const target = event.target.closest("[data-edit-day]");
+      if (!target) return;
+      const [owner, date] = target.dataset.editDay.split("|");
+      $("#dailyOwner").value = owner;
+      $("#dailyDate").value = date;
+      switchView("newAttempt");
+      render();
+      $("#dailyTaskForm").scrollIntoView({ behavior: "auto", block: "start" });
+      const firstMetricInput = document.querySelector("[data-task]");
+      if (firstMetricInput) firstMetricInput.focus();
+    });
+
+    ["ownerFilter", "resultFilter", "search", "dailyOwner", "dailyDate", "overviewPeriod", "overviewStart", "overviewEnd", "reportStart", "reportEnd", "rangeOwnerFilter"].forEach((id) => {
+      $(`#${id}`).addEventListener("input", render);
+      $(`#${id}`).addEventListener("change", render);
+    });
+
+    $("#exportAttemptsBtn").addEventListener("click", () => {
+      const header = "Who,DATE (PT),Time (PT),Client,Creditor,Result,Reason,Note";
+      const rows = getFilteredAttempts().map((attempt) => [attempt.owner, attempt.date, attempt.time, attempt.client, attempt.creditor, attempt.result, attempt.reason || "", attempt.note || ""].map(csvCell).join(","));
+      exportCsv(`ds-ops-settlement-attempts-${todayLocal()}.csv`, header, rows);
+    });
+
+    $("#exportWeeklyBtn").addEventListener("click", () => {
+      const { start, end } = currentExportRange();
+      const header = ["Owner", "Date Range", ...reportColumns.map((column) => column.label)].map(csvCell).join(",");
+      const rows = [...owners, "Total"].map((owner) => {
+        const totals = rangeRollup(owner === "Total" ? "all" : owner, start, end);
+        return [owner, `${formatDate(start)} to ${formatDate(end)}`, ...reportColumns.map((column) => formatReportValue(column, totals))].map(csvCell).join(",");
+      });
+      exportCsv(`ds-ops-range-report-${start}-to-${end}.csv`, header, rows);
+    });
+
+    $("#exportDataBtn").addEventListener("click", () => {
+      const { start, end } = currentExportRange();
+      downloadJson(`ds-ops-data-${start}-to-${end}.json`, exportDataPackage());
+    });
+
+    $("#importDataBtn").addEventListener("click", () => $("#importDataFile").click());
+
+    $("#importDataFile").addEventListener("change", async (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+      try {
+        const data = JSON.parse(await file.text());
+        const result = importDataPackage(data);
+        window.alert(`Imported ${result.attempts} settlement attempts and ${result.days} daily metric rows.`);
+      } catch (error) {
+        window.alert(error.message || "Could not import this file.");
+      } finally {
+        event.target.value = "";
+      }
+    });
+
+    init();
+    loadServerData();
+  </script>
+</body>
+</html>
